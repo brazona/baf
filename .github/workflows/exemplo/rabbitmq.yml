@@ -1,0 +1,44 @@
+
+###
+### Pipeline executa os deploys do rabbitmq
+###
+
+name: Rabbitm Pipeline
+
+on:
+  pull_request:
+    paths:
+      - 'app/rabbitmq/**'
+    branches:
+      - 'main'
+      - 'develop'
+      - 'hotfix/**'
+      - 'releases/**'
+  workflow_dispatch:  
+jobs:
+  #identifica as variaveis 
+  identify:
+    name: Call Identifier
+    uses: ./.github/workflows/identifier.yml
+    with:
+      github_base_ref: ${{github.base_ref}}
+      github_event_name: ${{github.event_name }}
+      github_ref_name: ${{github.ref_name}}
+      app_name: 'RABBITMQ_'
+  
+  #Remover quando criar ambiente cloud
+  
+  #Publica o build
+  # deploy:
+  #   name: Pipeline Deploy
+  #   needs: [identify]
+  #   permissions: write-all
+  #   uses: ./.github/workflows/deploy.yml
+  #   secrets:
+  #     KUBECONFIG: ${{ secrets.KUBE_CONFIG }}
+  #   with:
+  #     environment_name: ${{needs.identify.outputs.environment_name}}
+  #     name_env: ${{needs.identify.outputs.github_env_file_field}}
+  #     path_app: app/rabbitmq
+
+

@@ -1,0 +1,51 @@
+name: Version Image Generate
+on:
+  workflow_call:
+    inputs:
+      environment_name:
+        required: true
+        type: string
+      path_pom:
+        required: true
+        type: string
+    outputs:
+      tag:
+        description: "Number tab image Docker"
+        value: ${{ jobs.generate-tag.outputs.tag }}
+jobs:
+  info-version-pom:
+    name: To extract Pom.xml
+    runs-on: ubuntu-latest
+    outputs:
+      version_pom: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Defined Version 
+        id: version
+        run: |
+          sudo apt-get update
+          sudo apt-get install libxml2
+          sudo apt-get install libxml2-utils
+          VALUE_VERSION=$(xmllint --xpath '/*[local-name()="project"]/*[local-name()="version"]/text()' "${{inputs.path_pom}}")
+          echo "version=$VALUE_VERSION" >> $GITHUB_OUTPUT
+  generate-tag:
+    name: Generate Tag
+    runs-on: ubuntu-latest
+    permissions: write-all
+    needs: [info-version-pom]
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    env:
+      buid_number:
+    steps:         
+      - name: Verify Build Number
+        if: false == contains(inputs.environment_name, 'production' ) || contains(inputs.environment_name, 'staging' )
+        run: |
+          echo "buid_number=-${{github.run_number}}" >> $GITHUB_ENV
+      - name: Defined Tag
+        id: tag
+        run: |
+          TAG_VALUE=${{needs.info-version-pom.outputs.version_pom}}${{env.buid_number}}
+          echo "tag=$TAG_VALUE" >> $GITHUB_OUTPUT
+      
