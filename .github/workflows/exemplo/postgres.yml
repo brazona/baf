@@ -1,0 +1,49 @@
+
+###
+### Pipeline executa os deploys do postgres
+###
+
+name: Postgres Pipeline
+
+on:
+  pull_request:
+    paths:
+      - 'app/postgres/**'
+    branches:
+      - 'main'
+      - 'develop'
+      - 'hotfix/**'
+      - 'releases/**'
+  workflow_dispatch:  
+jobs:
+  #identifica as variaveis 
+  identify:
+    name: Call Identifier
+    uses: ./.github/workflows/identifier.yml
+    with:
+      github_base_ref: ${{github.base_ref}}
+      github_event_name: ${{github.event_name }}
+      github_ref_name: ${{github.ref_name}}
+      app_name: 'POSTGRES_'
+  
+  deploy:
+    runs-on: ubuntu-latest # Or self-hosted 
+    steps:
+      - name: Initialize RDS Postgres DB
+        uses: bitovi/github-actions-apply-sql-scripts-to-postgres@v0.0.1
+        with:
+            #aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            #aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            #aws_default_region: us-east-1 
+            #aws_secret_name: some-secret-name-to-read-data-from
+            sql_scripts_path: ./app/postgres/scripts/init.sql # (This is the folder in your repo. Leave empty for root.)
+            dry_run: true # Defaults to true, set it to false to run
+            db_host: db-server.cv8ai00esg6r.us-east-1.rds.amazonaws.com
+            db_port: 5432
+            db_username: brazona
+            db_password: A22zGx6OQBe0bmi1BAEU
+            db_name: postgres
+
+  
+
+

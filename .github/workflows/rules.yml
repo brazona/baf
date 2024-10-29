@@ -1,0 +1,27 @@
+###
+### Pipeline Rule Branch Protection
+###
+
+name: Rule Branch Protection
+
+on:
+  push:
+    branches:
+      - 'main'
+jobs:
+  test: # Test action's functionality
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - uses: ./
+      with: 
+        PERSONAL-ACCESS-TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        BASE-BRANCH-PATTERN: 'main'
+        REQUIRED-NUMBER-OF-REVIEWERS: 1
+        #REQUIRED-STATUS-CHECKS: 'build,test'
+        REQUIRE-REVIEW-FROM-CODEOWNERS: 'true'
+        DISMISS-STALE-PR-APPROVALS-ON-NEW-COMMITS: 'true'
+        REQUIRE-LINEAR-HISTORY: 'true'
+        ALLOW-FORCE-PUSHES: 'true'
+        ALLOW-DELETIONS: 'true'
+        INCLUDE-ADMINISTRATORS: 'true'

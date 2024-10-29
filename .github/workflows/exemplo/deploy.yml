@@ -1,0 +1,85 @@
+name: Apply Manifest K8S
+on:
+  workflow_call:
+    secrets:
+      KUBECONFIG:
+        required: true
+    inputs:
+      environment_name:
+        required: true
+        type: string
+      name_env:
+        required: true
+        type: string
+      path_app:
+        required: true
+        type: string
+      docker_image_tag:
+        required: true
+        type: string
+    outputs:
+      successful:
+        description: "Status Successful"
+        value: ${{ jobs.deploy.outputs.successful }}
+env:
+  MANIFEST_IN: ${{ inputs.path_app }}/deployment.yml
+  MANIFEST_OUT: ${{ inputs.path_app }}/deployment-run.yml
+  ENV_TXT: ${{ inputs.path_app }}/env.txt
+  TEMPLATE_TXT: ${{ inputs.path_app }}/template.txt
+jobs:
+  envfile:
+    name: Env File
+    runs-on: ubuntu-latest
+    permissions: write-all
+    env:
+      VALUES: ${{ vars.DEVELOPMENT_ENV }}
+    outputs:
+      var_values: ${{ steps.values_file_env.outputs.values_file_env }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: File Env Homologation
+      if: contains(inputs.name_env, 'HOMOLOGATION_ENV')
+      run: |
+        echo "VALUES=${{ vars.HOMOLOGATION_ENV }}" >> $GITHUB_ENV
+    - name: File Env Staging
+      if: contains(inputs.name_env, 'STAGING_ENV')
+      run: |
+        echo "VALUES=${{ vars.STAGING_ENV }}" >> $GITHUB_ENV
+    - name: File Env Production
+      if: contains(inputs.name_env, 'PRODUCTION_ENV')
+      run: |
+        echo "VALUES=${{ vars.PRODUCTION_ENV }}" >> $GITHUB_ENV
+    - name: Out Values Env File
+      id: values_file_env
+      run: echo "values_file_env=${{ env.VALUES }}" >> $GITHUB_OUTPUT
+  deploy:
+    name: Deploy K8S
+    runs-on: ubuntu-latest
+    permissions: write-all
+    needs: [envfile]
+    environment:
+      name: ${{inputs.environment_name}}
+    outputs:
+      successful: ${{ steps.status.outputs.status }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    
+    - name: Preparete Manisfest k8s
+      run: |
+        echo ${{ needs.envfile.outputs.var_values }} >> "${{env.TEMPLATE_TXT}}" 
+        bash .github/workflows/scripts/manifest.sh ${{env.TEMPLATE_TXT}} ${{env.MANIFEST_IN}} ${{env.MANIFEST_OUT}} ${{inputs.docker_image_tag}}
+    - name: Set Kubernetes Context
+      uses: azure/k8s-set-context@v1
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBECONFIG }}
+    - name: Deploy to Cluster
+      run: | 
+        kubectl apply -f ${{env.MANIFEST_OUT}}
+    - name: Successful
+      id: status
+      run: echo "status=true" >> $GITHUB_OUTPUT
+
